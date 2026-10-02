@@ -1,0 +1,71 @@
+/* solid-graph styles. Import this into your Tailwind v4 stylesheet (after
+   @import "tailwindcss") so the component classes are generated:
+     @import "tailwindcss";
+     @import "solid-graph/styles.css";
+   Colours are CSS variables on .solid-graph; override any of them on the
+   canvas (or an ancestor) to theme it. `dark` follows your Tailwind dark
+   variant. */
+@source "./";
+
+.solid-graph {
+  --sg-bg: transparent;
+  --sg-grid: rgb(0 0 0 / 0.16);
+  --sg-edge: rgb(0 0 0 / 0.4);
+  --sg-selection: #3b82f6;
+  --sg-border: rgb(0 0 0 / 0.12);
+  --sg-hover: rgb(0 0 0 / 0.05);
+  --sg-muted: rgb(0 0 0 / 0.45);
+  --sg-node-bg: #fff;
+  --sg-node-fg: #0a0a0a;
+  --sg-handle-idle: rgb(0 0 0 / 0.1);
+  --sg-label-bg: #fff;
+  --sg-label-fg: #0a0a0a;
+  /* groups: one neutral grey, a step more contrast when selected */
+  --sg-group-bg: rgb(115 115 115 / 0.1);
+  --sg-group-border: rgb(163 163 163 / 0.6);
+  --sg-group-border-selected: rgb(115 115 115);
+  --sg-group-grip: rgb(115 115 115 / 0.1);
+  --sg-group-grip-hover: rgb(115 115 115 / 0.2);
+  --sg-group-fg: rgb(55 65 81);
+  --sg-group-placeholder: rgb(156 163 175);
+  /* selected nodes: the same grey as a selected group (the blue --sg-selection marks box select, edges, handles) */
+  --sg-node-border-selected: var(--sg-group-border-selected);
+  --sg-minimap-bg: #fff;
+  --sg-minimap-node: rgb(0 0 0 / 0.25);
+  --sg-minimap-group: rgb(0 0 0 / 0.08);
+  --sg-minimap-mask: rgb(0 0 0 / 0.06);
+
+  @variant dark {
+    --sg-grid: rgb(255 255 255 / 0.14);
+    --sg-edge: rgb(255 255 255 / 0.4);
+    --sg-border: rgb(255 255 255 / 0.12);
+    --sg-hover: rgb(255 255 255 / 0.06);
+    --sg-muted: rgb(255 255 255 / 0.5);
+    --sg-node-bg: #0b0f18;
+    --sg-node-fg: #fafafa;
+    --sg-handle-idle: rgb(255 255 255 / 0.12);
+    --sg-label-bg: #0b0f18;
+    --sg-label-fg: #fafafa;
+    --sg-group-bg: rgb(163 163 163 / 0.12);
+    --sg-group-border: rgb(255 255 255 / 0.2);
+    --sg-group-border-selected: rgb(255 255 255 / 0.45);
+    --sg-group-grip: rgb(255 255 255 / 0.05);
+    --sg-group-grip-hover: rgb(255 255 255 / 0.09);
+    --sg-group-fg: rgb(255 255 255 / 0.8);
+    --sg-group-placeholder: rgb(255 255 255 / 0.35);
+    --sg-minimap-bg: #0b0f18;
+    --sg-minimap-node: rgb(255 255 255 / 0.3);
+    --sg-minimap-group: rgb(255 255 255 / 0.08);
+    --sg-minimap-mask: rgb(255 255 255 / 0.05);
+  }
+}
+
+@keyframes sg-dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.sg-edge-animated {
+  stroke-dasharray: 6 4;
+  animation: sg-dash 0.6s linear infinite;
+}
