@@ -36,12 +36,24 @@ export interface GraphContextValue {
   selection(): Selection;
   /** Latest selection including one just reported but not yet applied by the host: for event handlers. */
   peekSelection(): Selection;
+  /** Reactive, O(1): for per-node and per-edge rendering. */
+  isNodeSelected(id: string): boolean;
+  isEdgeSelected(id: string): boolean;
   select(selection: Selection): void;
   viewport(): Viewport;
   canvasSize(): { width: number; height: number };
   measured: Record<string, MeasuredNode>;
+  /** Re-measure a node (batched: runs once per node in a microtask). */
   measure(id: string): void;
+  /** NodeRenderer registers its element (undefined when it unmounts). */
+  registerNode(id: string, el: HTMLElement | undefined): void;
   connection(): PendingConnection | null;
+  /** Start of the wire being dragged: changes only when a drag starts or ends, not as the pointer moves. */
+  connectingFrom(): HandleRef | null;
+  /** The handle the wire would land on: changes only when that handle changes. */
+  connectTarget(): HandleRef | null;
+  /** Whether an edge ends at this handle. */
+  isConnected(ref: HandleRef): boolean;
   isDragging(id: string): boolean;
   handlePoint(ref: HandleRef): (XY & { position: HandlePosition }) | null;
   startConnect(e: PointerEvent, ref: HandleRef): void;

@@ -163,7 +163,7 @@ export function MiniMap(props: MiniMapProps) {
               height={r.rect.height}
               rx={Math.min(r.rect.width, r.rect.height) * 0.08}
               fill={fill(r.node)}
-              stroke={ctx.selection().nodes.includes(r.node.id) ? "var(--sg-selection)" : "none"}
+              stroke={ctx.isNodeSelected(r.node.id) ? "var(--sg-selection)" : "none"}
               stroke-width={world().width / W()}
             />
           )}
