@@ -1,4 +1,4 @@
-import { onSettled, untrack } from "solid-js";
+import { createMemo, onSettled, untrack } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { useGraphContext, useNodeId } from "./context";
 import type { HandlePosition, HandleType } from "./types";
@@ -38,16 +38,13 @@ export function Handle(props: HandleProps) {
   const nodeId = useNodeId();
   const position = () => props.position ?? (props.type === "source" ? "right" : "left");
   const ref = () => ({ nodeId, handleId: props.id, type: props.type });
-  const isTarget = () => {
-    const h = ctx.connection()?.hover;
+  // separate memos, so dragging a wire only updates the handles whose state changes
+  const isTarget = createMemo(() => {
+    const h = ctx.connectTarget();
     return !!h && h.nodeId === nodeId && h.type === props.type && h.handleId === props.id;
-  };
-  const connected = () =>
-    ctx.edges().some((e) =>
-      props.type === "source"
-        ? e.source === nodeId && (e.sourceHandle ?? undefined) === props.id
-        : e.target === nodeId && (e.targetHandle ?? undefined) === props.id,
-    );
+  });
+  const connectable = createMemo(() => ctx.isConnectable(ref()));
+  const connected = createMemo(() => ctx.isConnected(ref()));
   // handles that appear or move after the node first rendered need a fresh measurement
   onSettled(() => untrack(() => ctx.measure(nodeId)));
 
@@ -58,7 +55,7 @@ export function Handle(props: HandleProps) {
       data-handle-id={props.id ?? ""}
       data-handle-type={props.type}
       data-handle-position={position()}
-      data-connectable={ctx.connection() && ctx.isConnectable(ref()) ? "" : undefined}
+      data-connectable={connectable() ? "" : undefined}
       data-connect-target={isTarget() ? "" : undefined}
       data-connected={connected() ? "" : undefined}
       class={

@@ -1,4 +1,4 @@
-import { Show, onSettled, untrack } from "solid-js";
+import { Show, createMemo, onSettled, untrack } from "solid-js";
 import { Dynamic } from "@solidjs/web";
 import { NodeIdContext, useGraphContext } from "./context";
 import type { GraphNode, NodeTypes } from "./types";
@@ -8,16 +8,25 @@ export function NodeRenderer(props: { node: GraphNode; types: NodeTypes }) {
   const ctx = useGraphContext();
   const id = untrack(() => props.node.id);
   let el: HTMLDivElement | undefined;
-  const selected = () => ctx.selection().nodes.includes(props.node.id);
+  // a memo: read by the style, which updates on every move while dragging
+  const selected = createMemo(() => ctx.isNodeSelected(props.node.id));
   const dragging = () => ctx.isDragging(props.node.id);
   const component = () => props.types[props.node.type ?? "default"] ?? props.types.default;
 
   onSettled(() => {
     // size and handle anchors follow the content
-    const ro = new ResizeObserver(() => ctx.measure(id));
+    ctx.registerNode(id, el);
+    // the observer also reports the size it starts with, already measured above: skip unchanged sizes
+    const ro = new ResizeObserver(() => {
+      const m = ctx.measured[id];
+      if (!m || m.width !== el!.offsetWidth || m.height !== el!.offsetHeight) ctx.measure(id);
+    });
     ro.observe(el!);
     ctx.measure(id);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      ctx.registerNode(id, undefined);
+    };
   });
 
   return (

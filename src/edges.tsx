@@ -128,7 +128,7 @@ export function EdgeRenderer(props: { edge: GraphEdge; types: EdgeTypes; default
         targetY={b()!.y}
         sourcePosition={a()!.position}
         targetPosition={b()!.position}
-        selected={ctx.selection().edges.includes(props.edge.id)}
+        selected={ctx.isEdgeSelected(props.edge.id)}
         color={props.edge.color ?? "var(--sg-edge)"}
       />
     </Show>

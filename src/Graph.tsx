@@ -102,6 +102,8 @@ export interface GraphProps {
 }
 
 const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+const sameRef = (a: HandleRef | null, b: HandleRef | null) =>
+  a === b || (!!a && !!b && a.nodeId === b.nodeId && a.type === b.type && a.handleId === b.handleId);
 
 /** Selector for elements inside a node that never start a drag. */
 const NO_DRAG = "[data-handle],[data-nodrag],input,textarea,select,button,a,[contenteditable='true']";
@@ -123,6 +125,8 @@ export function Graph(props: GraphProps) {
   /** Latest selection we reported, readable synchronously while the host's update is pending. */
   let lastSelection: Selection | null = null;
   const currentSelection = () => lastSelection ?? selection();
+  const selectedNodes = createMemo(() => new Set(selection().nodes));
+  const selectedEdges = createMemo(() => new Set(selection().edges));
   const setSelection = (s: Selection) => {
     const cur = currentSelection();
     if (sameIds(cur.nodes, s.nodes) && sameIds(cur.edges, s.edges)) return;
@@ -136,6 +140,9 @@ export function Graph(props: GraphProps) {
   const [measured, setMeasured] = createStore<Record<string, MeasuredNode>>({});
   const [canvasSize, setCanvasSize] = createSignal({ width: 0, height: 0 });
   const [connection, setConnection] = createSignal<PendingConnection | null>(null);
+  // handles only care about where a wire starts and which handle it would land on, not the pointer
+  const connectingFrom = createMemo(() => connection()?.from ?? null, { equals: sameRef });
+  const connectTarget = createMemo(() => connection()?.hover ?? null, { equals: sameRef });
   const [dragging, setDragging] = createSignal<Set<string>>(new Set());
   const [box, setBox] = createSignal<{ a: XY; b: XY } | null>(null);
   const [spaceDown, setSpaceDown] = createSignal(false);
@@ -189,9 +196,11 @@ export function Graph(props: GraphProps) {
   };
 
   // ---- measurement ------------------------------------------------------------
+  /** Rendered node elements (registered by NodeRenderer), so measuring doesn't search the DOM. */
+  const nodeEls = new Map<string, HTMLElement>();
   /** Size and handle anchors of a node's element (relative to the node, in flow units). */
-  const measure = (id: string) => {
-    const node = el?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(id)}"]`);
+  const measureNow = (id: string) => {
+    const node = nodeEls.get(id);
     if (!node) return;
     const zoom = viewport().zoom;
     const base = node.getBoundingClientRect();
@@ -218,6 +227,30 @@ export function Graph(props: GraphProps) {
       m[id] = { width: node.offsetWidth, height: node.offsetHeight, handles };
     });
   };
+
+  // A node is asked to measure when it mounts, when each of its handles mounts, and when it resizes:
+  // once per node per microtask is enough.
+  const toMeasure = new Set<string>();
+  const measure = (id: string) => {
+    if (!toMeasure.size)
+      queueMicrotask(() => {
+        const ids = [...toMeasure];
+        toMeasure.clear();
+        for (const x of ids) measureNow(x);
+      });
+    toMeasure.add(id);
+  };
+
+  /** Handles with an edge, keyed node + handle key: one pass over the edges instead of one per handle. */
+  const connectedHandles = createMemo(() => {
+    const s = new Set<string>();
+    for (const e of props.edges) {
+      s.add(`${e.source}\n${handleKey("source", e.sourceHandle ?? undefined)}`);
+      s.add(`${e.target}\n${handleKey("target", e.targetHandle ?? undefined)}`);
+    }
+    return s;
+  });
+  const isConnected = (ref: HandleRef) => connectedHandles().has(`${ref.nodeId}\n${handleKey(ref.type, ref.handleId)}`);
 
   const handlePoint: GraphContextValue["handlePoint"] = (ref) => {
     const n = nodeById().get(ref.nodeId);
@@ -296,8 +329,8 @@ export function Graph(props: GraphProps) {
   };
 
   const isConnectable: GraphContextValue["isConnectable"] = (ref) => {
-    const c = connection();
-    return !!c && valid(c.from, ref);
+    const from = connectingFrom();
+    return !!from && valid(from, ref);
   };
 
   // ---- node drag ------------------------------------------------------------------
@@ -683,12 +716,18 @@ export function Graph(props: GraphProps) {
     nodeById,
     selection,
     peekSelection: currentSelection,
+    isNodeSelected: (id) => selectedNodes().has(id),
+    isEdgeSelected: (id) => selectedEdges().has(id),
     select: setSelection,
     viewport,
     canvasSize,
     measured,
     measure,
+    registerNode: (id, node) => (node ? nodeEls.set(id, node) : nodeEls.delete(id)),
     connection,
+    connectingFrom,
+    connectTarget,
+    isConnected,
     isDragging: (id) => dragging().has(id),
     handlePoint,
     startConnect,
