@@ -548,6 +548,9 @@ export function Graph(props: GraphProps) {
     if (!(e.button === 1 || (e.button === 0 && spaceDown()))) return;
     if ((e.target as HTMLElement).closest("[data-sg-overlay]")) return;
     e.stopPropagation();
+    // The press doesn't move focus (startPan prevents that), so a button focused earlier would be
+    // pressed when Space is released: a Space+drag is for the canvas, so take focus from it.
+    if (e.button === 0) (document.activeElement as HTMLElement | null)?.blur?.();
     startPan(e, !(e.target as HTMLElement).closest("[data-node-id],[data-edge-id]"));
   };
 
